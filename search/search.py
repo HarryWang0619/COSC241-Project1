@@ -86,18 +86,79 @@ def depthFirstSearch(problem):
     print "Is the start a goal?", problem.isGoalState(problem.getStartState())
     print "Start's successors:", problem.getSuccessors(problem.getStartState())
     """
-    "*** YOUR CODE HERE ***"
+    stack = util.Stack()    # Use a Lifo Queue in DFS
+    start = (problem.getStartState(), [])   # get start state
+    result = []     # result to return
+    explored = []   # explored set
+
+    stack.push(start)   # push the start state in to the lifo queue
+
+    while (not stack.isEmpty()):  
+        (state, path) = stack.pop() # pop node
+        if problem.isGoalState(state):  # check whether the state is goal state
+            result = path
+            return result
+
+        if (state not in explored):   
+            explored.append(state)
+
+            for s in problem.getSuccessors(state): 
+                stack.push((s[0], path + [s[1]])) #pushed child node, and new path
+
+    return result
     util.raiseNotDefined()
 
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
-    "*** YOUR CODE HERE ***"
+    # In breadth first search functions, we need to use a FIFO queue
+    # the logic would be pretty similar
+    queue = util.Queue()
+    start = (problem.getStartState(), [])
+    result = []
+    explored = []
+
+    queue.push(start)
+
+    while (not queue.isEmpty()):
+        (node, path) = queue.pop()
+        if problem.isGoalState(node):
+            result = path
+            return path
+
+        if (node not in explored):
+            explored.append(node)
+
+            for n in problem.getSuccessors(node):
+                queue.push((n[0], path + [n[1]]))  #pushed child node, and new path
+
+    return result
+
     util.raiseNotDefined()
 
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    priorityQueue = util.PriorityQueue()
+    start = (problem.getStartState(), [], 0)
+    result = []
+    explored = []
+
+    priorityQueue.update(start,0)
+
+    while (not priorityQueue.isEmpty()):
+        (node, path, cost) = priorityQueue.pop()
+        if problem.isGoalState(node):
+            result = path
+            return result
+
+        if node not in explored:
+            explored.append(node)
+
+            for n in problem.getSuccessors(node):
+                priorityQueue.update((n[0], path + [n[1]], cost + n[2]), cost + n[2]) # update the queue with node : (child node, path, priority), and priority
+
+
+    return result
+
 
 def nullHeuristic(state, problem=None):
     """
@@ -106,11 +167,44 @@ def nullHeuristic(state, problem=None):
     """
     return 0
 
+
 def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
-    "*** YOUR CODE HERE ***"
+    # priority = cost & heuristic
+    priorityQueue = util.PriorityQueue() # could also try add heuristic here instead of below but I failed ; )
+    start = (problem.getStartState(), [], 0) 
+    result = []
+    explored = []
+
+    priorityQueue.update(start, heuristic(start[0], problem))
+
+    while (not priorityQueue.isEmpty()):
+        (node, path, cost) = priorityQueue.pop()
+
+        if problem.isGoalState(node):
+            result = path
+            return result
+
+        if node not in explored:
+            explored.append(node)
+
+            for n in problem.getSuccessors(node):
+                priorityQueue.update((n[0], path + [n[1]], cost + n[2]), cost + n[2] + heuristic(n[0], problem)) 
+                # update node, priority
+                
+                # the cost function is the key.
+
+    return result
+
     util.raiseNotDefined()
 
+# def Path(node):
+#     path = []
+#     newNode = node
+#     while newNode:
+#         path = [newNode[0][1]] + path
+#         newNode = newNode[1]
+#     return path
 
 # Abbreviations
 bfs = breadthFirstSearch
