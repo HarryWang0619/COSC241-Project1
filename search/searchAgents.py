@@ -255,6 +255,12 @@ def manhattanHeuristic(position, problem, info={}):
     xy1 = position
     xy2 = problem.goal
     return abs(xy1[0] - xy2[0]) + abs(xy1[1] - xy2[1])
+    
+def manhattanHeuristic2(position, problem, info={}):
+    "The Manhattan distance heuristic for a PositionSearchProblem"
+    xy1 = position
+    xy2 = problem
+    return abs(xy1[0] - xy2[0]) + abs(xy1[1] - xy2[1])
 
 def euclideanHeuristic(position, problem, info={}):
     "The Euclidean distance heuristic for a PositionSearchProblem"
@@ -288,7 +294,9 @@ class CornersProblem(search.SearchProblem):
         # Please add any code here which you would like to use
         # in initializing the problem
         "*** YOUR CODE HERE ***"
+        #Initializes startingState as a tuple of 2 values: coordinates and a list of visited corners
         self.startingState = (self.startingPosition, ())
+        #cost lambda function from default problem
         self.costFn = lambda x: 1
 
     def getStartState(self):
@@ -297,6 +305,7 @@ class CornersProblem(search.SearchProblem):
         space)
         """
         "*** YOUR CODE HERE ***"
+        #Returns the starting state stated in def __init__
         return self.startingState
         util.raiseNotDefined()
 
@@ -305,6 +314,8 @@ class CornersProblem(search.SearchProblem):
         Returns whether this search state is a goal state of the problem.
         """
         "*** YOUR CODE HERE ***"
+        #checks a list of visted corners of a certain state and if it is a goal state, return true, else return false
+        #compares length of all of the corners initialized in __init__
         visitedCorners = state[1]
         if len(visitedCorners) == 4:
             return True
@@ -334,17 +345,18 @@ class CornersProblem(search.SearchProblem):
             #   hitsWall = self.walls[nextx][nexty]
 
             "*** YOUR CODE HERE ***"
-            x,y = state[0]
-            visitedCorners = list(state[1])
-            dx, dy = Actions.directionToVector(action)
-            nextx, nexty = int(x + dx), int(y + dy)
-            if not self.walls[nextx][nexty]:
-                nextState = (nextx, nexty)
-                if nextState in self.corners:
+
+            x,y = state[0] #x,y coordinates from state
+            visitedCorners = list(state[1]) #turns tuple of visited corners from state[1] into list
+            dx, dy = Actions.directionToVector(action) #code from first problem 
+            nextx, nexty = int(x + dx), int(y + dy) #code from first problem
+            if not self.walls[nextx][nexty]: #code from first problem
+                nextState = (nextx, nexty) 
+                if nextState in self.corners: #if current state is a corner and is not in already visited corners, add it to visited corners
                     if nextState not in visitedCorners:
                         visitedCorners.append(nextState)
                 cost = self.costFn(nextState)
-                successors.append(((nextState, visitedCorners), action, cost))
+                successors.append(((nextState, visitedCorners), action, cost)) #add state to successors with a path of all the visited corners
         self._expanded += 1 # DO NOT CHANGE
         return successors
 
@@ -378,9 +390,21 @@ def cornersHeuristic(state, problem):
     walls = problem.walls # These are the walls of the maze, as a Grid (game.py)
 
     "*** YOUR CODE HERE ***"
-    #comment about will's code
+    #Logic of the cornersHeuristic: as explained by Will and some stackoverflow fellows
+    #An effective method of getting the heuristic is getting a list of corners not yet visited
+    #which can be obtained from state[1], as we implemented into the cornersProblem initialization.
+    #We, then, calculate a manhattan distance, which is probably more accurate than euclidean distance
+    #because of walls and such, of the state and the next nearest corner, by adding all the manhattan distances
+    #to every corner not yet visited into a list and getting the min or the closest corner. Then we calculate the
+    #heuristic from that new corner (new checkpoint) to the next nearest corner. We repeat this until a goal state is
+    #reached.
+    #Getting the min or sum of all the heuristics to each corner would not work because, as Will mentioned, if there is a
+    #food at the end of a row and another food in the coordinate right next to it, the heuristic would be 2x, where x is the heuristic to the first food pellet.
+    #When in actuality, the heuristic is 1.1x because the second food pellet is right next to the first one.
+    #This logic allows us to calculate an accurate because we update the checkpoint so the heuristic to the next food pellet is as accurate as possible, aside from
+    #flaws of manhattan distance.
     heuristics = 0
-    checkpoint = state[0]
+    checkpoint = state[0] #state we want to calculate heuristic from
     if problem.isGoalState(state) == True:
         return 0
     listofCorners = list(problem.corners)
@@ -391,20 +415,18 @@ def cornersHeuristic(state, problem):
         tempHeuristic = []
         for corner in listofCorners:
             tempHeuristic.append(manhattanHeuristic2(checkpoint, corner))
-        heuristics += min(tempHeuristic)
+        heuristics += min(tempHeuristic) #finds closest corner
         #update checkpoint a.k.a new corner
-        indexofClosestCorner = tempHeuristic.index(min(tempHeuristic))
-        checkpoint = listofCorners[(indexofClosestCorner)]
-        listofCorners.remove(checkpoint)
+        indexofClosestCorner = tempHeuristic.index(min(tempHeuristic)) 
+        checkpoint = listofCorners[(indexofClosestCorner)] 
+        listofCorners.remove(checkpoint) #removing corner because it is now visited and checks heuristics to other corners
     return heuristics
 
-
-    #listofCorners is coordinates of corners left to visit
-    #old solution
+    #old solution: gives only 1/3
     # for corner in listofCorners:
     #     heuristics.append(util.manhattanDistance(state[0], corner))
-    # #first approach which is the max, gives 2/3
-    # return max(heuristics)
+    # #first approach which is the min, gives 1/3
+    # return min(heuristics)
 
 class AStarCornersAgent(SearchAgent):
     "A SearchAgent for FoodSearchProblem using A* and your foodHeuristic"
@@ -496,17 +518,21 @@ def foodHeuristic(state, problem):
     Subsequent calls to this heuristic can access
     problem.heuristicInfo['wallCount']
     """
-    position, foodGrid = state
+    position, foodGrid = state #foodGrid is a list of food left
     heuristics = []
-    listofFoodCoords = foodGrid.asList()
-    if problem.isGoalState(state) == True:
+    listofFoodCoords = foodGrid.asList() #makes list of coordinates of food 
+    if problem.isGoalState(state) == True: #goal check
         return 0
-    for food in listofFoodCoords:
+    for food in listofFoodCoords: #same logic as cornersHeuristic, makes a list of food left to eat
         if food in state[1]:
             listofFoodCoords.remove(food)
-    for food in listofFoodCoords:
-        heuristics.append(mazeDistance(state[0], food, problem.startingGameState))
-    #max gives 
+    for food in listofFoodCoords: #getting heuristic of food left
+        heuristics.append(mazeDistance(state[0], food, problem.startingGameState)) #3rd argument is any game state
+    #max gives 5/4; min gives 2/4
+    #we are optimizing the f <= G
+    #overshoots the least optimistic food, so that our heuristic would test which solution is the best out of the least optimistic
+    #searching for the closest might lead us to a path that will, in the end, have more of a cost than the max. we're trying to find all the food,
+    #not just the closest one
     return max(heuristics)
 
 
